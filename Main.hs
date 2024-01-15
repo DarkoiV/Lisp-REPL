@@ -37,8 +37,14 @@ charP c = Parser fn
       | c == x    = Just (c, xs)
       | otherwise = Nothing 
 
-whitespaceP :: Parser String 
-whitespaceP = some (charP ' ')
+stringP :: String -> Parser String 
+stringP = mapM charP
+
+whitespaceP :: Parser Char
+whitespaceP = charP ' ' <|> charP '\n' <|> charP '\r' <|> charP '\t'
+
+skipwsP :: Parser String
+skipwsP = some whitespaceP
 
 main :: IO ()
 main = return ()
