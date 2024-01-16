@@ -48,3 +48,16 @@ skipwsP = some whitespaceP
 
 ignorewsP :: Parser String 
 ignorewsP = many whitespaceP
+
+digitP :: Parser Char 
+digitP = foldr (<|>) empty $ map charP ['0' .. '9']
+
+numberP :: Parser Float
+numberP = read <$> (decimal <|> integral)
+  where 
+    integral = some digitP 
+    decimal  = do
+      bp <- some digitP
+      p  <- charP '.'
+      ap <- some digitP
+      return (bp ++ (p : ap)) 
