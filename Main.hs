@@ -1,50 +1,36 @@
 module Main where
+import Parser
 import Control.Applicative
 
-newtype Parser a = Parser { runParser :: String -> Maybe (a, String) }
+data Symbol = Add 
+            | Sub
+            | Mul 
+            | Div 
+            | Symbol String
 
-instance Functor Parser where 
-  fmap f (Parser p) = Parser $ \str -> 
-    p str >>= \(x, str') -> 
-    return (f x, str')
+str2symbol :: String -> Symbol 
+str2symbol "Add" = Add
+str2symbol str   = Symbol str
 
-instance Applicative Parser where 
-  pure x = Parser $ \str -> Just (x, str)
+data SExpr = SExpr Symbol [Val]
+data Val = Nil | Expr SExpr | Number Float
 
-  (Parser pf) <*> (Parser px) = Parser $ \str -> 
-    pf str  >>= \(f, str')  ->
-    px str' >>= \(x, str'') ->
-    return (f x, str'')
+toNumber :: Val -> Maybe Float
+toNumber (Number x) = Just x
+toNumber _          = Nothing
 
-instance Monad Parser where 
-  (Parser p) >>= f = Parser $ \str ->
-    p str >>= \(x, str') ->
-    runParser (f x) str'
+fromNumber :: Maybe Float -> Val 
+fromNumber (Nothing) = Nil
+fromNumber (Just n)  = Number n
 
-instance Alternative Parser where 
-  empty = Parser $ \_ -> Nothing
-  
-  (Parser pr) <|> (Parser pl) = Parser $ \str ->
-    case pr str of 
-      Just pr -> Just pr
-      Nothing -> pl str
+eval :: SExpr -> Val
+eval (SExpr Add vals) = fromNumber . (fmap sum) . sequence $ fmap toNumber vals  
 
-charP :: Char -> Parser Char
-charP c = Parser fn
-  where 
-    fn []         = Nothing
-    fn (x:xs) 
-      | c == x    = Just (c, xs)
-      | otherwise = Nothing 
-
-stringP :: String -> Parser String 
-stringP = mapM charP
-
-whitespaceP :: Parser Char
-whitespaceP = charP ' ' <|> charP '\n' <|> charP '\r' <|> charP '\t'
-
-skipwsP :: Parser String
-skipwsP = some whitespaceP
+symbolP :: Parser Symbol
+symbolP = fmap str2symbol $ stringP "Add" 
+      <|> stringP "Sub"
+      <|> stringP "Mul"
+      <|> stringP "Div"
 
 main :: IO ()
 main = return ()
