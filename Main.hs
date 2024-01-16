@@ -8,6 +8,13 @@ data Symbol = Add
             | Div 
             | Symbol String
 
+instance Show Symbol where 
+  show (Add)      = "+"
+  show (Sub)      = "-"
+  show (Mul)      = "*"
+  show (Div)      = "/"
+  show (Symbol s) = s
+
 str2symbol :: String -> Symbol 
 str2symbol "+" = Add
 str2symbol "-" = Sub
@@ -16,7 +23,18 @@ str2symbol "/" = Div
 str2symbol str = Symbol str
 
 data SExpr = SExpr Symbol [Val]
+
+instance Show SExpr where 
+  show (SExpr symbol vals) = "(" ++ show symbol ++ showVals ++ ")"
+    where 
+      showVals = concat $ map (\v -> " " ++ show v) vals
+
 data Val = Nil | Expr SExpr | Number Float
+
+instance Show Val where 
+  show (Nil)        = "Nil"
+  show (Expr sexpr) = show sexpr 
+  show (Number n)   = show n
 
 toNumber :: Val -> Maybe Float
 toNumber (Number x) = Just x
@@ -38,17 +56,16 @@ eval (SExpr Div vals)
 eval _ = undefined
 
 symbolP :: Parser Symbol
-symbolP = fmap str2symbol $ stringP "Add" 
-      <|> stringP "Sub"
-      <|> stringP "Mul"
-      <|> stringP "Div"
+symbolP = fmap str2symbol $ stringP "+" 
+      <|> stringP "-"
+      <|> stringP "*"
+      <|> stringP "/"
 
 valP :: Parser Val
-valP = sexpr <|> number <|> nil
+valP = ignorewsP *> (sexpr <|> number)
   where
     sexpr  = fmap Expr sexprP 
     number = fmap Number (numberP) 
-    nil    = pure Nil
 
 sexprP :: Parser SExpr 
 sexprP = do
