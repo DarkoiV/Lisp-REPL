@@ -6,7 +6,8 @@ import Text.Read (readMaybe)
 data Symbol = Add 
             | Sub
             | Mul 
-            | Div 
+            | Div
+            | If
             | Symbol String
 
 instance Show Symbol where 
@@ -14,14 +15,16 @@ instance Show Symbol where
   show (Sub)      = "-"
   show (Mul)      = "*"
   show (Div)      = "/"
+  show (If)       = "if"
   show (Symbol s) = s
 
 str2symbol :: String -> Symbol 
-str2symbol "+" = Add
-str2symbol "-" = Sub
-str2symbol "*" = Mul
-str2symbol "/" = Div
-str2symbol str = Symbol str
+str2symbol "+"  = Add
+str2symbol "-"  = Sub
+str2symbol "*"  = Mul
+str2symbol "/"  = Div
+str2symbol "if" = If
+str2symbol str  = Symbol str
 
 data SExpr = SExpr Symbol [Val]
 
@@ -48,11 +51,22 @@ fromNumber :: Maybe Float -> Val
 fromNumber (Nothing) = Nil
 fromNumber (Just n)  = Number n
 
+isTruthy :: Val -> Bool
+isTruthy (Number 0) = False
+isTruthy (Number _) = True
+isTruthy (Nil)      = False
+isTruthy (Expr e)   = isTruthy $ eval e
+isTruthy _          = False
+
 eval :: SExpr -> Val
-eval (SExpr Add vals) = fromNumber . (fmap sum) . sequence $ fmap toNumber vals  
-eval (SExpr Sub vals) = fromNumber $ fmap (foldl1 (-)) . sequence $ fmap toNumber vals
-eval (SExpr Mul vals) = fromNumber . (fmap product) . sequence $ fmap toNumber vals  
-eval (SExpr Div vals) = fromNumber $ fmap (foldl1 (/)) . sequence $ fmap toNumber vals
+eval (SExpr Add vals)   = fromNumber . (fmap sum) . sequence $ fmap toNumber vals  
+eval (SExpr Sub vals)   = fromNumber $ fmap (foldl1 (-)) . sequence $ fmap toNumber vals
+eval (SExpr Mul vals)   = fromNumber . (fmap product) . sequence $ fmap toNumber vals  
+eval (SExpr Div vals)   = fromNumber $ fmap (foldl1 (/)) . sequence $ fmap toNumber vals
+
+eval (SExpr If [i, t])    = eval $ SExpr If [i, t, Nil]
+eval (SExpr If [i, t, e]) = if isTruthy i then t else e
+
 eval _ = undefined
 
 symbolP :: Parser Symbol
@@ -60,6 +74,7 @@ symbolP = fmap str2symbol $ stringP "+"
       <|> stringP "-"
       <|> stringP "*"
       <|> stringP "/"
+      <|> stringP "if"
 
 valP :: Parser Val
 valP = ignorewsP *> (sexpr <|> number <|> sliteral)
