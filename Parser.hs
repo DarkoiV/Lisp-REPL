@@ -1,5 +1,6 @@
 module Parser where 
 import Control.Applicative
+import Control.Arrow
 
 newtype Parser a = Parser { runParser :: String -> Maybe (a, String) }
 
@@ -37,6 +38,14 @@ charP c = Parser fn
       | c == x    = Just (c, xs)
       | otherwise = Nothing 
 
+allUntilCharP :: Char -> Parser String 
+allUntilCharP c = Parser fn
+  where 
+    fn []         = Nothing
+    fn (x:xs)
+      | c == x    = Just ([], x:xs)
+      | otherwise = (\(s, str) -> (x : s, str)) <$> fn xs 
+
 stringP :: String -> Parser String 
 stringP = mapM charP
 
@@ -61,3 +70,10 @@ numberP = read <$> (decimal <|> integral)
       p  <- charP '.'
       ap <- some digitP
       return (bp ++ (p : ap)) 
+
+stringliteralP :: Parser String 
+stringliteralP = do
+  charP '\"'
+  str <- allUntilCharP '\"'
+  charP '\"'
+  return str
