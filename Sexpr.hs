@@ -1,4 +1,4 @@
-module Main where
+module Sexpr where
 import Parser
 import Control.Applicative
 
@@ -78,5 +78,3 @@ sexprP = do
   return (SExpr symbol vals)
   
 
-main :: IO ()
-main = return ()
