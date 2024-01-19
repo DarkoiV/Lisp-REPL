@@ -1,6 +1,7 @@
 module Sexpr where
 import Parser
 import Control.Applicative
+import Text.Read (readMaybe)
 
 data Symbol = Add 
             | Sub
@@ -29,15 +30,18 @@ instance Show SExpr where
     where 
       showVals = concat $ map (\v -> " " ++ show v) vals
 
-data Val = Nil | Expr SExpr | Number Float
+data Val = Nil | Expr SExpr | Number Float | Str String
 
 instance Show Val where 
   show (Nil)        = "Nil"
   show (Expr sexpr) = show sexpr 
   show (Number n)   = show n
+  show (Str s)      = show s
 
 toNumber :: Val -> Maybe Float
 toNumber (Number x) = Just x
+toNumber (Expr e)   = toNumber $ eval e
+toNumber (Str s)    = readMaybe s
 toNumber _          = Nothing
 
 fromNumber :: Maybe Float -> Val 
@@ -58,10 +62,11 @@ symbolP = fmap str2symbol $ stringP "+"
       <|> stringP "/"
 
 valP :: Parser Val
-valP = ignorewsP *> (sexpr <|> number)
+valP = ignorewsP *> (sexpr <|> number <|> sliteral)
   where
-    sexpr  = fmap Expr sexprP 
-    number = fmap Number (numberP) 
+    sexpr    = fmap Expr sexprP 
+    number   = fmap Number numberP
+    sliteral = fmap Str stringliteralP
 
 sexprP :: Parser SExpr 
 sexprP = do
