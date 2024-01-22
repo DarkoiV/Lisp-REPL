@@ -1,4 +1,3 @@
 #! /bin/bash
 
-ghc -hidir build -odir build Main.hs
-./Main
+ghc -hidir build -odir build Main.hs && ./Main
