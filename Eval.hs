@@ -1,6 +1,7 @@
 module Eval where
 import Sexpr
 import Data.List (find)
+import Text.Read (readMaybe)
 
 data EvalCtx = EvalCtx { getSymbols :: SymbolList }
 data Eval a  = Eval { runEval :: EvalCtx -> (a, EvalCtx) }
@@ -27,12 +28,25 @@ findSymbol sym = Eval $ \ctx ->
   let found = find (\(name,_) -> name == sym) (getSymbols ctx) in 
   case found of 
     Just x  -> (snd x, ctx)
-    Nothing -> (Err $ sym ++ " not found", ctx)
+    Nothing -> (Err $ "Symbol: \"" ++ sym ++ "\" not found", ctx)
 
-isTruthy :: Val -> Bool
-isTruthy (Number 0) = False
-isTruthy (Number _) = True
-isTruthy (Nil)      = False
-isTruthy (Expr e)   = False
-isTruthy _          = False
+isTruthy :: Val -> Eval Bool
+isTruthy (Number 0)      = return False
+isTruthy (Number _)      = return True
+isTruthy (Expr e)        = eval e >>= isTruthy
+isTruthy (Symbol "true") = return True 
+isTruthy (Symbol s)      = findSymbol s >>= isTruthy
+isTruthy _               = return False
 
+asNumber :: Val -> Eval (Maybe Float)
+asNumber (Number x) = return $ Just x
+asNumber (Str s)    = return $ readMaybe s
+asNumber (Expr e)   = eval e >>= asNumber
+asNumber (Symbol s) = findSymbol s >>= asNumber
+asNumber _          = return $ Nothing
+
+eval :: SExpr -> Eval Val
+eval (SExpr ((Symbol x):vs)) = findSymbol x >>= \resolved -> eval $ SExpr (resolved:vs)
+eval (SExpr ((Lambda f):vs)) = return $ f vs
+eval (SExpr ((Err e):_))     = return $ Err e
+eval _                       = return $ Err "invalid expression"

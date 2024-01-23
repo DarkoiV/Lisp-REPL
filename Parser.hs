@@ -61,6 +61,11 @@ ignorewsP = many whitespaceP
 digitP :: Parser Char 
 digitP = foldr (<|>) empty $ map charP ['0' .. '9']
 
+tokenP :: Parser String
+tokenP = some chars
+  where 
+    chars     = foldr (<|>) empty $ map charP ('/' : '*' : '-' : '+' : ['a' .. 'z'])
+
 numberP :: Parser Float
 numberP = read <$> (decimal <|> integral)
   where 

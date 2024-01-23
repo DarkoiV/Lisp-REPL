@@ -1,49 +1,46 @@
 module Sexpr where
 import Parser
 import Control.Applicative
+import Data.List (intercalate)
 
-data Symbol     = Symbol String
+type Fun        = ([Val] -> Val)
 data SExpr      = SExpr [Val]
 type SymbolList = [(String, Val)]
 data Val        = Nil 
                 | Expr   SExpr 
+                | Lambda Fun
                 | Number Float 
                 | Str    String 
-                | Sym    Symbol
+                | Symbol String
                 | Err    String
-
-instance Show Symbol where 
-  show (Symbol s) = s
 
 instance Show SExpr where 
   show (SExpr vals) = "(" ++ showVals ++ ")"
     where 
-      showVals = concat $ map (\v -> " " ++ show v) vals
+      showVals = intercalate " " $ map show vals
 
 instance Show Val where 
   show (Nil)        = "Nil"
   show (Expr sexpr) = show sexpr 
+  show (Lambda _)   = "λ->"
   show (Number n)   = show n
   show (Str s)      = show s
-  show (Sym s)      = show s
-  show (Err s)      = "!! ERR: " ++ show s
+  show (Symbol s)   = s
+  show (Err s)      = "!! ERR: " ++ s " !!"
 
-symbolP :: SymbolList -> Parser Symbol
-symbolP sl = pure Symbol <*> (foldr (<|>) empty $ map (stringP . fst) sl)
-
-valP :: SymbolList -> Parser Val
-valP sl = ignorewsP *> (sexpr <|> number <|> sliteral <|> symbol)
+valP :: Parser Val
+valP = ignorewsP *> (sexpr <|> number <|> sliteral <|> symbol)
   where
-    sexpr    = fmap Expr   (sexprP sl)
+    sexpr    = fmap Expr   sexprP
     number   = fmap Number numberP
     sliteral = fmap Str    stringliteralP
-    symbol   = fmap Sym    (symbolP sl)
+    symbol   = fmap Symbol tokenP
 
-sexprP :: SymbolList -> Parser SExpr 
-sexprP sl = do
+sexprP :: Parser SExpr 
+sexprP = do
   charP '('
   ignorewsP
-  vals   <- many $ valP sl
+  vals <- many valP
   ignorewsP
   charP ')'
   return (SExpr vals)
