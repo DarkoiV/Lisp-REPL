@@ -30,23 +30,27 @@ findSymbol sym = Eval $ \ctx ->
     Just x  -> (snd x, ctx)
     Nothing -> (Err $ "Symbol: \"" ++ sym ++ "\" not found", ctx)
 
-isTruthy :: Val -> Eval Bool
-isTruthy (Number 0)      = return False
-isTruthy (Number _)      = return True
-isTruthy (Expr e)        = eval e >>= isTruthy
-isTruthy (Symbol "true") = return True 
-isTruthy (Symbol s)      = findSymbol s >>= isTruthy
-isTruthy _               = return False
+isTruthy :: Val -> Bool
+isTruthy (Number 0) = False
+isTruthy (Number _) = True
+isTruthy (Val True) = True
+isTruthy _          = False
 
-asNumber :: Val -> Eval (Maybe Float)
-asNumber (Number x) = return $ Just x
-asNumber (Str s)    = return $ readMaybe s
-asNumber (Expr e)   = eval e >>= asNumber
-asNumber (Symbol s) = findSymbol s >>= asNumber
-asNumber _          = return $ Nothing
+asNumber :: Val -> Maybe Float
+asNumber (Number x) = Just x
+asNumber (Str s)    = readMaybe s
+asNumber _          = Nothing
 
 eval :: SExpr -> Eval Val
 eval (SExpr ((Symbol x):vs)) = findSymbol x >>= \resolved -> eval $ SExpr (resolved:vs)
 eval (SExpr ((Lambda f):vs)) = return $ f vs
 eval (SExpr ((Err e):_))     = return $ Err e
 eval _                       = return $ Err "invalid expression"
+
+add :: Fun 
+add vs = let maybeNums = sequence $ map asNumber vs in
+  case maybeNums of
+    Nothing   -> Err "add requires all values to be numeric"
+    Just nums -> Number $ sum nums
+
+defaultCtx = EvalCtx $ [("+", Lambda add)]

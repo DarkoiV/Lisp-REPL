@@ -18,5 +18,5 @@ main = do
   putStrLn "--------------------------------------"
   putStrLn "(entering  \n  (darkoiv-lisp-repl \n    (!!!welecome!!!)))"
   putStrLn "--------------------------------------\n"
-  repl $ EvalCtx []
+  repl defaultCtx
   return ()

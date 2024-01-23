@@ -10,6 +10,7 @@ data Val        = Nil
                 | Expr   SExpr 
                 | Lambda Fun
                 | Number Float 
+                | Val    Bool
                 | Str    String 
                 | Symbol String
                 | Err    String
@@ -26,7 +27,7 @@ instance Show Val where
   show (Number n)   = show n
   show (Str s)      = show s
   show (Symbol s)   = s
-  show (Err s)      = "!! ERR: " ++ s " !!"
+  show (Err s)      = "!! ERR: " ++ s ++ " !!"
 
 valP :: Parser Val
 valP = ignorewsP *> (sexpr <|> number <|> sliteral <|> symbol)
