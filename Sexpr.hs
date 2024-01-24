@@ -9,6 +9,7 @@ type SymbolList = [(String, Val)]
 data Val        = Nil 
                 | Expr   SExpr 
                 | Lambda Fun
+                | Macro  (SExpr -> SExpr)
                 | Number Float 
                 | Val    Bool
                 | Str    String 
@@ -24,6 +25,7 @@ instance Show Val where
   show (Nil)        = "Nil"
   show (Expr sexpr) = show sexpr 
   show (Lambda _)   = "λ->"
+  show (Macro _)    = "???"
   show (Number n)   = show n
   show (Str s)      = show s
   show (Symbol s)   = s

@@ -55,8 +55,14 @@ resolve (v:vs) = (:) <$> pure v <*> resolve vs
 eval :: SExpr -> Eval Val
 eval (SExpr ((Symbol x):vs)) = findSymbol x >>= \resolved -> eval $ SExpr (resolved:vs)
 eval (SExpr ((Lambda f):vs)) = f <$> (resolve vs)
+eval (SExpr ((Macro  m):vs)) = return $ Expr $ m (SExpr ((Macro m):vs))
 eval (SExpr ((Err e):_))     = return $ Err e
 eval _                       = return $ Err "invalid expression"
+
+ifexpr :: SExpr -> SExpr 
+ifexpr (SExpr (_:p:t:e:[])) = SExpr [Lambda ifexpr', p]
+  where 
+    ifexpr' = \(pred:_) -> if (isTruthy pred) then t else e
 
 add :: Fun 
 add vs = let maybeNums = sequence $ map asNumber vs in
@@ -86,4 +92,5 @@ defaultCtx = EvalCtx $ [ ("+", Lambda add)
                        , ("-", Lambda sub)
                        , ("*", Lambda mul)
                        , ("/", Lambda divl)
+                       , ("if", Macro ifexpr)
                        ]
