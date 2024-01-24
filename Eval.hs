@@ -2,6 +2,7 @@ module Eval where
 import Sexpr
 import Data.List (find)
 import Text.Read (readMaybe)
+import Data.Either
 
 data EvalCtx = EvalCtx { getSymbols :: SymbolList }
 data Eval a  = Eval { runEval :: EvalCtx -> (a, EvalCtx) }
@@ -41,9 +42,19 @@ asNumber (Number x) = Just x
 asNumber (Str s)    = readMaybe s
 asNumber _          = Nothing
 
+resolve :: [Val] -> Eval [Val]
+resolve []              = pure []
+resolve ((Expr e):vs)   = (:) <$> eval e <*> resolve vs
+resolve ((Symbol s):vs) = (:) <$> (findSymbol s >>= resolve') <*> resolve vs
+  where
+    resolve' (Expr e) = eval e
+    resolve' x        = pure x
+
+resolve (v:vs) = (:) <$> pure v <*> resolve vs
+
 eval :: SExpr -> Eval Val
 eval (SExpr ((Symbol x):vs)) = findSymbol x >>= \resolved -> eval $ SExpr (resolved:vs)
-eval (SExpr ((Lambda f):vs)) = return $ f vs
+eval (SExpr ((Lambda f):vs)) = f <$> (resolve vs)
 eval (SExpr ((Err e):_))     = return $ Err e
 eval _                       = return $ Err "invalid expression"
 
@@ -53,4 +64,26 @@ add vs = let maybeNums = sequence $ map asNumber vs in
     Nothing   -> Err "add requires all values to be numeric"
     Just nums -> Number $ sum nums
 
-defaultCtx = EvalCtx $ [("+", Lambda add)]
+sub :: Fun 
+sub (a:b:[]) = case (-) <$> (asNumber a) <*> (asNumber b) of
+  Nothing  -> Err "sub requires numeric values"
+  Just res -> Number res
+sub _ = Err "sub requires two operands"
+
+mul :: Fun 
+mul vs = let maybeNums = sequence $ map asNumber vs in
+  case maybeNums of
+    Nothing   -> Err "mul requires all values to be numeric"
+    Just nums -> Number $ product nums
+
+divl :: Fun 
+divl (a:b:[]) = case (/) <$> (asNumber a) <*> (asNumber b) of
+  Nothing  -> Err "div requires numeric values"
+  Just res -> Number res
+divl _ = Err "div requires two operands"
+
+defaultCtx = EvalCtx $ [ ("+", Lambda add)
+                       , ("-", Lambda sub)
+                       , ("*", Lambda mul)
+                       , ("/", Lambda divl)
+                       ]
