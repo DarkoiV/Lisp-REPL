@@ -11,7 +11,7 @@ repl ctx = do
     Nothing      -> putStrLn "Invalid expresion" >> repl ctx 
     Just (exp,_) -> doExpr ctx exp
 
-doExpr :: EvalCtx -> SExpr -> IO EvalCtx
+doExpr :: EvalCtx -> [Val] -> IO EvalCtx
 doExpr ctx exp = let (res, ctx') = runEval (eval exp) ctx in 
   case res of 
     Expr exp' -> putStrLn (" -> " ++ (show res)) >> doExpr ctx' exp'

@@ -4,28 +4,22 @@ import Control.Applicative
 import Data.List (intercalate)
 
 type Fun        = ([Val] -> Val)
-data SExpr      = SExpr [Val]
 type SymbolList = [(String, Val)]
 data Val        = Nil 
-                | Expr   SExpr 
+                | Expr   [Val] 
                 | Lambda Fun
-                | Macro  (SExpr -> SExpr)
                 | Number Float 
                 | Val    Bool
                 | Str    String 
                 | Symbol String
                 | Err    String
 
-instance Show SExpr where 
-  show (SExpr vals) = "(" ++ showVals ++ ")"
+instance Show Val where 
+  show (Expr vals) = "(" ++ showVals ++ ")"
     where 
       showVals = intercalate " " $ map show vals
-
-instance Show Val where 
   show (Nil)        = "Nil"
-  show (Expr sexpr) = show sexpr 
-  show (Lambda _)   = "λ->"
-  show (Macro _)    = "???"
+  show (Lambda _)   = "λ"
   show (Number n)   = show n
   show (Str s)      = show s
   show (Symbol s)   = s
@@ -39,11 +33,11 @@ valP = ignorewsP *> (sexpr <|> number <|> sliteral <|> symbol)
     sliteral = fmap Str    stringliteralP
     symbol   = fmap Symbol tokenP
 
-sexprP :: Parser SExpr 
+sexprP :: Parser [Val] 
 sexprP = do
   charP '('
   ignorewsP
   vals <- many valP
   ignorewsP
   charP ')'
-  return (SExpr vals)
+  return vals
