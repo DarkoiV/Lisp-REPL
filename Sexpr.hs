@@ -9,10 +9,13 @@ data Val        = Nil
                 | Expr   [Val] 
                 | Lambda Fun
                 | Number Float 
-                | Val    Bool
+                | Logic  Bool
                 | Str    String 
                 | Symbol String
                 | Err    String
+
+isSymbol :: String -> (String, Val) -> Bool
+isSymbol n t = let (name,_) = t in n == name
 
 instance Show Val where 
   show (Expr vals) = "(" ++ showVals ++ ")"
@@ -41,3 +44,5 @@ sexprP = do
   ignorewsP
   charP ')'
   return vals
+
+parseSExpr = runParser sexprP
