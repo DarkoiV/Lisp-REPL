@@ -3,33 +3,21 @@ import Sexpr
 import Data.List (find)
 import Text.Read (readMaybe)
 import Data.Either
+import Control.Monad.State 
 
 data EvalCtx = EvalCtx { getSymbols :: SymbolList }
-data Eval a  = Eval { runEval :: EvalCtx -> (a, EvalCtx) }
+type Eval    = StateT EvalCtx IO
 
-instance Functor Eval where 
-  fmap f (Eval eval) = Eval $ \ctx -> 
-    let (res, ctx') = eval ctx 
-    in (f res, ctx')
+findSymbol :: String -> Eval Val
+findSymbol s = do
+   ctx <- get
+   let found = find (\(name,_) -> s == name) (getSymbols ctx)
+   case found of 
+     Nothing       -> return . Err $ "Symbol " ++ s ++ " not found"
+     Just (_, val) -> return val
 
-instance Applicative Eval where
-  pure x = Eval $ \ctx -> (x, ctx)
-  (Eval ef) <*> (Eval ev) = Eval $ \ctx -> 
-    let (f, ctx')  = ef ctx 
-        (v, ctx'') = ev ctx' 
-    in (f v, ctx'') 
-
-instance Monad Eval where
-  (Eval eval) >>= f = Eval $ \ctx -> 
-    let (v, ctx') = eval ctx 
-    in runEval (f v) ctx'
-
-findSymbol :: String -> Eval Val 
-findSymbol sym = Eval $ \ctx ->
-  let found = find (\(name,_) -> name == sym) (getSymbols ctx) in 
-  case found of 
-    Just x  -> (snd x, ctx)
-    Nothing -> (Err $ "Symbol: \"" ++ sym ++ "\" not found", ctx)
+doIO :: IO a -> Eval a
+doIO = lift
 
 isTruthy :: Val -> Bool
 isTruthy (Number 0) = False
@@ -87,3 +75,5 @@ defaultCtx = EvalCtx $ [ ("+", Lambda add)
                        , ("*", Lambda mul)
                        , ("/", Lambda divl)
                        ]
+startEval :: (Eval a) -> IO ()
+startEval fn = runStateT fn defaultCtx >> return ()
