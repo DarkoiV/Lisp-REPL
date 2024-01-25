@@ -45,26 +45,24 @@ asNumber (Str s)    = readMaybe s
 asNumber _          = Nothing
 
 resolve :: [Val] -> Eval [Val]
-resolve []              = pure []
-resolve ((Expr e):vs)   = (:) <$> eval e <*> resolve vs
-resolve ((Symbol s):vs) = (:) <$> (findSymbol s >>= resolve') <*> resolve vs
-  where
-    resolve' (Expr e) = eval vs
-    resolve' x        = pure x
+resolve []     = pure []
+resolve (v:vs) = (:) <$> resolve' v <*> resolve vs
 
-resolve (v:vs) = (:) <$> pure v <*> resolve vs
+resolve' :: Val -> Eval Val
+resolve' (Symbol s) = findSymbol s >>= resolve'
+resolve' (Expr e)   = eval e
+resolve' x          = pure x
 
 eval :: [Val] -> Eval Val 
-
 -- Specialized eval --
 eval ((Symbol "cond"):vs) = case vs of
   (p:t:e:[]) -> do
-    condRes <- isTruthy p
+    condRes <- resolve' p >>= isTruthy
     if condRes
       then return t
       else return e
   (p:t:[]) -> do
-    condRes <- isTruthy p
+    condRes <- resolve' p >>= isTruthy
     if condRes
       then return t
       else return Nil

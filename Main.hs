@@ -9,7 +9,7 @@ repl = do
   case parsed of 
     Just (expr, _) -> do 
       evalRes <- eval expr
-      doIO $ putStrLn (show evalRes)
+      doIO $ putStrLn ("==> " ++ show evalRes)
     Nothing -> doIO $ putStrLn "Failed to parse expression"
   repl
 
