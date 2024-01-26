@@ -1,6 +1,6 @@
 module Eval where
 import Sexpr
-import Data.List (find, findIndex)
+import Data.List (find, findIndex, intercalate)
 import Text.Read (readMaybe)
 import Data.Either
 import Control.Monad.State 
@@ -69,10 +69,21 @@ define [(Symbol name), x] = do
   return Nil
 define _ = return $ Err "invalid define statement"
 
+printv :: [Val] -> Eval Val 
+printv vals = doIO $ putStrLn (intercalate " " $ map show vals) >> return Nil
+
+doTasks :: [Val] -> Eval Val 
+doTasks vs = do' Nil vs 
+  where 
+    do' res []   = return res 
+    do' _ (t:ts) = resolve t >>= \r -> do' r ts
+
 -- Eval --
 eval ((Symbol x):vs) 
   | x == "cond"   = cond vs
   | x == "define" = define vs
+  | x == "print"  = sequence (map resolve vs) >>= printv
+  | x == "do"     = doTasks vs
   | otherwise     = findSymbol x >>= \resolved -> eval $ (resolved:vs)
 eval ((Lambda f):vs) = f <$> (sequence $ map resolve vs)
 eval ((Err e):_)     = return $ Err e
