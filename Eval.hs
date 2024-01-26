@@ -53,12 +53,12 @@ cond :: [Val] -> Eval Val
 cond [p,t,e] = do
   condRes <- resolve p >>= isTruthy
   if condRes
-    then return t
-    else return e
+    then resolve t
+    else resolve e
 cond [p,t] = do
   condRes <- resolve p >>= isTruthy
   if condRes
-    then return t
+    then resolve t
     else return Nil
 cond _ = return $ Err "invalid cond statement"
 
