@@ -1,6 +1,7 @@
 module Main where
 import Sexpr
 import Eval
+import Slib
 
 repl :: Eval ()
 repl = do 
@@ -18,5 +19,4 @@ main = do
   putStrLn "--------------------------------------"
   putStrLn "(entering  \n  (darkoiv-lisp-repl \n    (!!!welecome!!!)))"
   putStrLn "--------------------------------------\n"
-  startEval repl
-  return ()
+  runEval repl standardlib

@@ -32,6 +32,11 @@ putSymbol s v = do
 doIO :: IO a -> Eval a
 doIO = lift
 
+resolve :: Val -> Eval Val
+resolve (Symbol s) = findSymbol s >>= resolve
+resolve (Expr e)   = eval e
+resolve x          = pure x
+
 isTruthy :: Val -> Eval Bool
 isTruthy (Number 0)   = return False
 isTruthy (Number _)   = return True
@@ -44,71 +49,34 @@ asNumber (Number x) = Just x
 asNumber (Str s)    = readMaybe s
 asNumber _          = Nothing
 
-resolve :: [Val] -> Eval [Val]
-resolve []     = pure []
-resolve (v:vs) = (:) <$> resolve' v <*> resolve vs
+cond :: [Val] -> Eval Val
+cond [p,t,e] = do
+  condRes <- resolve p >>= isTruthy
+  if condRes
+    then return t
+    else return e
+cond [p,t] = do
+  condRes <- resolve p >>= isTruthy
+  if condRes
+    then return t
+    else return Nil
+cond _ = return $ Err "invalid cond statement"
 
-resolve' :: Val -> Eval Val
-resolve' (Symbol s) = findSymbol s >>= resolve'
-resolve' (Expr e)   = eval e
-resolve' x          = pure x
+define :: [Val] -> Eval Val
+define [(Symbol name), x] = do
+  doIO $ putStrLn (name ++ " = " ++ (show x))
+  putSymbol name x
+  return Nil
+define _ = return $ Err "invalid define statement"
 
-eval :: [Val] -> Eval Val 
--- Specialized eval --
-eval ((Symbol "cond"):vs) = case vs of
-  (p:t:e:[]) -> do
-    condRes <- resolve' p >>= isTruthy
-    if condRes
-      then return t
-      else return e
-  (p:t:[]) -> do
-    condRes <- resolve' p >>= isTruthy
-    if condRes
-      then return t
-      else return Nil
-  otherwise -> return $ Err "invalid cond statement"
-
-eval ((Symbol "define"):vs) = case vs of
-  ((Symbol name):x:[]) -> do
-    doIO $ putStrLn (name ++ " = " ++ (show x))
-    putSymbol name x
-    return Nil
-  otherwise -> return $ Err "invalid define statement"
-
--- Generic Eval --
-eval ((Symbol x):vs) = findSymbol x >>= \resolved -> eval $ (resolved:vs)
-eval ((Lambda f):vs) = f <$> (resolve vs)
+-- Eval --
+eval ((Symbol x):vs) 
+  | x == "cond"   = cond vs
+  | x == "define" = define vs
+  | otherwise     = findSymbol x >>= \resolved -> eval $ (resolved:vs)
+eval ((Lambda f):vs) = f <$> (sequence $ map resolve vs)
 eval ((Err e):_)     = return $ Err e
 eval _               = return $ Err "invalid expression"
 
-add :: Fun 
-add vs = let maybeNums = sequence $ map asNumber vs in
-  case maybeNums of
-    Nothing   -> Err "add requires all values to be numeric"
-    Just nums -> Number $ sum nums
-
-sub :: Fun 
-sub (a:b:[]) = case (-) <$> (asNumber a) <*> (asNumber b) of
-  Nothing  -> Err "sub requires numeric values"
-  Just res -> Number res
-sub _ = Err "sub requires two operands"
-
-mul :: Fun 
-mul vs = let maybeNums = sequence $ map asNumber vs in
-  case maybeNums of
-    Nothing   -> Err "mul requires all values to be numeric"
-    Just nums -> Number $ product nums
-
-divl :: Fun 
-divl (a:b:[]) = case (/) <$> (asNumber a) <*> (asNumber b) of
-  Nothing  -> Err "div requires numeric values"
-  Just res -> Number res
-divl _ = Err "div requires two operands"
-
-defaultCtx = EvalCtx $ [ ("+", Lambda add)
-                       , ("-", Lambda sub)
-                       , ("*", Lambda mul)
-                       , ("/", Lambda divl)
-                       ]
-startEval :: (Eval a) -> IO ()
-startEval fn = runStateT fn defaultCtx >> return ()
+runEval :: (Eval a) -> EvalCtx -> IO ()
+runEval fn ctx = runStateT fn ctx >> return () 
