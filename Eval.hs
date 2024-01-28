@@ -78,12 +78,29 @@ doTasks vs = do' Nil vs
     do' res []   = return res 
     do' _ (t:ts) = resolve t >>= \r -> do' r ts
 
+bind :: [Val] -> Eval Val 
+bind [(Expr binding),target] = case bindList binding of 
+  Just list -> resolve $ bind' list target
+  Nothing   -> return $ Err "failed to resolve bind list"
+  where
+    bindList []                  = Just []
+    bindList ((Symbol s):val:vs) = (:) <$> pure (s,val) <*> bindList vs
+    bindList _                   = Nothing 
+    bind' list (Expr e)   = Expr $ map (bind' list) e
+    bind' list (Symbol s) = let found = find ((s==) . fst) list in 
+      case found of 
+        Just (_, value) -> value 
+        Nothing         -> Symbol s
+    bind' _    x          = x
+bind _ = return $ Err "invalid bind statement"
+
 -- Eval --
 eval ((Symbol x):vs) 
   | x == "cond"   = cond vs
   | x == "define" = define vs
   | x == "print"  = sequence (map resolve vs) >>= printv
   | x == "do"     = doTasks vs
+  | x == "bind"   = bind vs
   | otherwise     = findSymbol x >>= \resolved -> eval $ (resolved:vs)
 eval ((Lambda f):vs) = f <$> (sequence $ map resolve vs)
 eval ((Err e):_)     = return $ Err e
