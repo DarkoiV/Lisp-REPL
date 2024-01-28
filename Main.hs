@@ -2,10 +2,26 @@ module Main where
 import Sexpr
 import Eval
 import Slib
+import System.IO
+
+readExpression :: Int -> IO String 
+readExpression op = do 
+  i <- getChar
+  case i of 
+    '('  -> (:) <$> pure '(' <*> readExpression (op + 1)
+    ')'  -> (:) <$> pure ')' <*> readExpression (op - 1)
+    '\n' -> if op == 0 
+      then return [] 
+      else do
+        let indent = take (op*2) $ repeat ' '
+        putStr indent
+        hFlush stdout
+        readExpression op
+    c    -> (:) <$> pure c <*> readExpression op
 
 repl :: Eval ()
 repl = do 
-  input <- doIO getLine 
+  input <- doIO $ readExpression 0 
   let parsed = parseSExpr input 
   case parsed of 
     Just (expr, _) -> do 
