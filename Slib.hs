@@ -27,9 +27,23 @@ divl (a:b:[]) = case (/) <$> (asNumber a) <*> (asNumber b) of
   Just res -> Number res
 divl _ = Err "div requires two operands"
 
+isNumeric :: Fun 
+isNumeric vs = case sequence $ map asNumber vs of 
+  Just _  -> Logic True 
+  Nothing -> Logic False
+
+isString :: Fun 
+isString vs = Logic $ isString' vs
+  where
+    isString' [(Str _)]    = True 
+    isString' ((Str _):vs) = True && isString' vs
+    isString' _            = False
+
 standardlib = EvalCtx $ 
-  [ ("+", Lambda add)
-  , ("-", Lambda sub)
-  , ("*", Lambda mul)
-  , ("/", Lambda divl)
+  [ ("+",          Lambda add)
+  , ("-",          Lambda sub)
+  , ("*",          Lambda mul)
+  , ("/",          Lambda divl)
+  , ("is-numeric", Lambda isNumeric)
+  , ("is-string",  Lambda isString)
   ]
