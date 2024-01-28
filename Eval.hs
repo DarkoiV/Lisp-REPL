@@ -64,6 +64,7 @@ cond _ = return $ Err "invalid cond statement"
 
 define :: [Val] -> Eval Val
 define [(Symbol name), x] = do
+  x <- resolve x
   doIO $ putStrLn (name ++ " = " ++ (show x))
   putSymbol name x
   return Nil
@@ -78,10 +79,10 @@ doTasks vs = do' Nil vs
     do' res []   = return res 
     do' _ (t:ts) = resolve t >>= \r -> do' r ts
 
-bind :: [Val] -> Eval Val 
+bind :: [Val] -> Val 
 bind [(Expr binding),target] = case bindList binding of 
-  Just list -> resolve $ bind' list target
-  Nothing   -> return $ Err "failed to resolve bind list"
+  Just list -> bind' list target
+  Nothing   -> Err "failed to resolve bind list"
   where
     bindList []                  = Just []
     bindList ((Symbol s):val:vs) = (:) <$> pure (s,val) <*> bindList vs
@@ -92,7 +93,23 @@ bind [(Expr binding),target] = case bindList binding of
         Just (_, value) -> value 
         Nothing         -> Symbol s
     bind' _    x          = x
-bind _ = return $ Err "invalid bind statement"
+bind _ = Err "invalid bind statement"
+
+lambda :: [Val] -> Val 
+lambda [(Expr params),(Expr e)]
+  | allSymbols params = Lambda $ \vals -> 
+    if length vals /= length params 
+      then Err $ "Lambda arity mismatch, expected: " ++ show (length params)
+      else let args = Expr $ merge params vals 
+        in bind [args, (Expr e)]
+  | otherwise = Err "invalid lambda expressions"
+  where 
+    allSymbols []              = True 
+    allSymbols ((Symbol _):vs) = True && (allSymbols vs)
+    allSymbols _               = False
+    merge []     []     = []
+    merge (b:bs) (v:vs) = b : v : merge bs vs
+lambda _ = Err "invalid lambda statement"
 
 -- Eval --
 eval ((Symbol x):vs) 
@@ -100,9 +117,10 @@ eval ((Symbol x):vs)
   | x == "define" = define vs
   | x == "print"  = sequence (map resolve vs) >>= printv
   | x == "do"     = doTasks vs
-  | x == "bind"   = bind vs
+  | x == "bind"   = resolve $ bind vs
+  | x == "lambda" = return $ lambda vs
   | otherwise     = findSymbol x >>= \resolved -> eval $ (resolved:vs)
-eval ((Lambda f):vs) = f <$> (sequence $ map resolve vs)
+eval ((Lambda f):vs) = resolve =<< f <$> (sequence $ map resolve vs)
 eval ((Err e):_)     = return $ Err e
 eval _               = return $ Err "invalid expression"
 
