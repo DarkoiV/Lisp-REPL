@@ -71,7 +71,10 @@ define [(Symbol name), x] = do
 define _ = return $ Err "invalid define statement"
 
 printv :: [Val] -> Eval Val 
-printv vals = doIO $ putStrLn (intercalate " " $ map show vals) >> return Nil
+printv vals = doIO $ putStrLn (concatMap toPrint vals) >> return Nil
+  where 
+    toPrint (Str s) = s 
+    toPrint x       = show x
 
 doTasks :: [Val] -> Eval Val 
 doTasks vs = do' Nil vs 
