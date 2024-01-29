@@ -119,6 +119,7 @@ eval ((Symbol x):vs)
   | x == "do"     = doTasks vs
   | x == "bind"   = resolve $ bind vs
   | x == "lambda" = return $ lambda vs
+  | x == "read"   = Str <$> doIO getLine
   | otherwise     = findSymbol x >>= \resolved -> eval $ (resolved:vs)
 eval ((Lambda f):vs) = resolve =<< f <$> (sequence $ map resolve vs)
 eval ((Err e):_)     = return $ Err e

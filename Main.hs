@@ -10,13 +10,13 @@ readExpression op = do
   case i of 
     '('  -> (:) <$> pure '(' <*> readExpression (op + 1)
     ')'  -> (:) <$> pure ')' <*> readExpression (op - 1)
-    '\n' -> if op == 0 
+    '\n' -> if op <= 0 
       then return [] 
       else do
         let indent = take (op*2) $ repeat ' '
         putStr indent
         hFlush stdout
-        readExpression op
+        (:) <$> pure ' ' <*> readExpression op
     c    -> (:) <$> pure c <*> readExpression op
 
 repl :: Eval ()
