@@ -4,6 +4,7 @@ import Data.List (find, findIndex, intercalate)
 import Text.Read (readMaybe)
 import Data.Either
 import Control.Monad.State 
+import System.IO
 
 data EvalCtx = EvalCtx { getSymbols :: SymbolList }
 type Eval    = StateT EvalCtx IO
@@ -82,6 +83,17 @@ doTasks vs = do' Nil vs
     do' res []   = return res 
     do' _ (t:ts) = resolve t >>= \r -> do' r ts
 
+dofile :: [Val] -> Eval Val 
+dofile [(Str filename)] = do
+  file <- doIO $ readFile filename
+  let parsed = parseFile file
+  case parsed of
+    Nothing    -> doIO $ putStrLn "Failed to parse file" 
+      >> return Nil
+    Just (v,_) -> doTasks v
+dofile _ = doIO $ putStrLn "invalid do-file statement" 
+  >> return Nil
+
 bind :: [Val] -> Val 
 bind [(Expr binding),target] = case bindList binding of 
   Just list -> bind' list target
@@ -114,12 +126,14 @@ lambda [(Expr params),(Expr e)]
     merge (b:bs) (v:vs) = b : v : merge bs vs
 lambda _ = Err "invalid lambda statement"
 
--- Eval --
-eval ((Symbol x):vs) 
+-- Eval -- 
+eval :: [Val] -> Eval Val
+eval ((Symbol x):vs)
   | x == "cond"   = cond vs
   | x == "define" = define vs
   | x == "print"  = sequence (map resolve vs) >>= printv
   | x == "do"     = doTasks vs
+  | x == "dofile" = dofile vs
   | x == "bind"   = resolve $ bind vs
   | x == "lambda" = return $ lambda vs
   | x == "read"   = Str <$> doIO getLine

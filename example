@@ -1,0 +1,13 @@
+(define greeting
+  (lambda (name)
+    (print "Welcome " name)))
+
+(define ask-for-name
+  (lambda ()
+    (do
+      (print "What is thou name?")
+      (bind (name (read))
+        (greeting name)))))
+
+(print "Hello World!")
+(ask-for-name)

@@ -38,6 +38,7 @@ valP = ignorewsP *> (sexpr <|> number <|> sliteral <|> symbol)
 
 sexprP :: Parser [Val] 
 sexprP = do
+  ignorewsP
   charP '('
   ignorewsP
   vals <- many valP
@@ -45,4 +46,8 @@ sexprP = do
   charP ')'
   return vals
 
+fileP :: Parser [Val]
+fileP = some (Expr <$> sexprP)
+
 parseSExpr = runParser sexprP
+parseFile  = runParser fileP
