@@ -1,5 +1,5 @@
 ## Simple Lisp REPL
-Simple REPL writen from scratch in haskell
+Simple REPL written from scratch in haskell
 
 ### Build'n'run
 To run, just clone, create build folder and execture run-repl.sh 
