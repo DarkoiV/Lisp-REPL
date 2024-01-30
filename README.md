@@ -16,7 +16,7 @@ mkdir build
 Arthmetic operations in std lib  
 ![mathlisp](https://github.com/DarkoiV/Lisp-REPL/assets/25897608/3eb0f5fa-8da4-49e3-9b0c-29cbbf0cf53c)
 
-Suport defining new values, including functions  
+Support defining new values, including functions  
 ![my-func](https://github.com/DarkoiV/Lisp-REPL/assets/25897608/447f0c77-a54b-41e8-8db2-8e882578fb74)
 
 And can do script files  
